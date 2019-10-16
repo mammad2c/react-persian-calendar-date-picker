@@ -43,9 +43,9 @@ const Calendar = ({
   const calendarElement = useRef(null);
   const monthYearTextWrappers = [];
   const calendarSectionWrappers = [];
-  const monthSelector = useRef(null);
-  const yearSelector = useRef(null);
-  const yearSelectorWrapper = useRef(null);
+  const monthSelector = [];
+  const yearSelector = [];
+  const yearSelectorWrapper = [];
   const [mainState, setMainState] = useState({
     status: 'NEXT',
     cycleCount: 1,
@@ -239,11 +239,11 @@ const Calendar = ({
     });
   };
 
-  const toggleMonthSelector = () => {
+  const toggleMonthSelector = index => {
     toggleMonthArrows();
-    const monthText = calendarElement.current.querySelector(
+    const monthText = calendarElement.current.querySelectorAll(
       '.Calendar__monthYear.-shown .Calendar__monthText',
-    );
+    )[index];
     const yearText = monthText.nextSibling;
     const isClosed = yearText.classList.contains('-hidden');
     const scale = isClosed ? 1 : 1.05;
@@ -252,40 +252,40 @@ const Calendar = ({
     monthText.style.transform = `scale(${scale}) translateX(${translateX}px)`;
     monthText.classList.toggle('-activeBackground');
     yearText.classList.toggle('-hidden');
-    monthSelector.current.classList.toggle('-open');
+    monthSelector[index].classList.toggle('-open');
   };
 
-  const toggleYearSelector = () => {
+  const toggleYearSelector = index => {
     toggleMonthArrows();
-    const yearText = calendarElement.current.querySelector(
+    const yearText = calendarElement.current.querySelectorAll(
       '.Calendar__monthYear.-shown .Calendar__yearText',
-    );
+    )[index];
     const monthText = yearText.previousSibling;
     const isClosed = monthText.classList.contains('-hidden');
     const scale = isClosed ? 1 : 1.05;
     const translateX = isClosed ? 0 : `${monthText.offsetWidth / 2}`;
-    const activeSelectorYear = calendarElement.current.querySelector(
+    const activeSelectorYear = calendarElement.current.querySelectorAll(
       '.Calendar__yearSelectorText.-active',
-    );
-    yearSelectorWrapper.current.classList.toggle('-faded');
-    yearSelector.current.scrollTop =
+    )[index];
+    yearSelectorWrapper[index].classList.toggle('-faded');
+    yearSelector[index].scrollTop =
       activeSelectorYear.offsetTop - activeSelectorYear.offsetHeight * 5.8;
     monthText.style.transform = '';
     yearText.style.transform = `scale(${scale}) translateX(${translateX}px)`;
     yearText.classList.toggle('-activeBackground');
     monthText.classList.toggle('-hidden');
-    yearSelector.current.classList.toggle('-open');
+    yearSelector[index].classList.toggle('-open');
   };
 
-  const handleMonthSelect = newMonthNumber => {
+  const handleMonthSelect = (newMonthNumber, index) => {
     setMainState({
       ...mainState,
       activeDate: { ...activeDate, month: newMonthNumber },
     });
-    toggleMonthSelector();
+    toggleMonthSelector(index);
   };
 
-  const renderMonthSelectorItems = () =>
+  const renderMonthSelectorItems = index =>
     PERSIAN_MONTHS.map(persianMonth => {
       const monthNumber = getMonthNumber(persianMonth);
       const monthDate = { day: 1, month: monthNumber, year: activeDate.year };
@@ -300,7 +300,7 @@ const Calendar = ({
           <button
             tabIndex="-1"
             onClick={() => {
-              handleMonthSelect(monthNumber);
+              handleMonthSelect(monthNumber, index);
             }}
             className={`Calendar__monthSelectorItemText ${
               monthNumber === activeDate.month ? '-active' : ''
@@ -314,15 +314,15 @@ const Calendar = ({
       );
     });
 
-  const selectYear = year => {
+  const selectYear = (year, index) => {
     setMainState({
       ...mainState,
       activeDate: { ...activeDate, year },
     });
-    toggleYearSelector();
+    toggleYearSelector(index);
   };
 
-  const renderSelectorYears = () => {
+  const renderSelectorYears = index => {
     // const items =
     const items = [];
     for (let i = selectorStartingYear; i <= selectorEndingYear; i += 1) {
@@ -338,7 +338,7 @@ const Calendar = ({
             className={`Calendar__yearSelectorText ${activeDate.year === item ? '-active' : ''}`}
             type="button"
             onClick={() => {
-              selectYear(item);
+              selectYear(item, index);
             }}
             disabled={isAfterMaximumDate || isBeforeMinimumDate}
           >
@@ -393,7 +393,7 @@ const Calendar = ({
               <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -shown">
                 <button
                   tabIndex="-1"
-                  onClick={toggleMonthSelector}
+                  onClick={() => toggleMonthSelector(index)}
                   type="button"
                   className="Calendar__monthText"
                 >
@@ -401,7 +401,7 @@ const Calendar = ({
                 </button>
                 <button
                   tabIndex="-1"
-                  onClick={toggleYearSelector}
+                  onClick={() => toggleYearSelector(index)}
                   type="button"
                   className="Calendar__yearText"
                 >
@@ -411,7 +411,7 @@ const Calendar = ({
               <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -hiddenNext">
                 <button
                   tabIndex="-1"
-                  onClick={toggleMonthSelector}
+                  onClick={() => toggleMonthSelector(index)}
                   type="button"
                   className="Calendar__monthText"
                 >
@@ -419,7 +419,7 @@ const Calendar = ({
                 </button>
                 <button
                   tabIndex="-1"
-                  onClick={toggleYearSelector}
+                  onClick={() => toggleYearSelector(index)}
                   type="button"
                   className="Calendar__yearText"
                 >
@@ -444,16 +444,31 @@ const Calendar = ({
           </div>
           <div className="Calendar__monthSelectorAnimationWrapper">
             <div className="Calendar__monthSelectorWrapper">
-              <div ref={monthSelector} className="Calendar__monthSelector">
-                {renderMonthSelectorItems()}
+              <div
+                ref={refer => {
+                  monthSelector[index] = refer;
+                }}
+                className="Calendar__monthSelector"
+              >
+                {renderMonthSelectorItems(index)}
               </div>
             </div>
           </div>
 
           <div className="Calendar__yearSelectorAnimationWrapper">
-            <div ref={yearSelectorWrapper} className="Calendar__yearSelectorWrapper">
-              <div ref={yearSelector} className="Calendar__yearSelector">
-                {renderSelectorYears()}
+            <div
+              ref={refer => {
+                yearSelectorWrapper[index] = refer;
+              }}
+              className="Calendar__yearSelectorWrapper"
+            >
+              <div
+                ref={refer => {
+                  yearSelector[index] = refer;
+                }}
+                className="Calendar__yearSelector"
+              >
+                {renderSelectorYears(index)}
               </div>
             </div>
           </div>
