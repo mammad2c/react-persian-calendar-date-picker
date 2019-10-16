@@ -41,8 +41,8 @@ const Calendar = ({
   numberOfMonths,
 }) => {
   const calendarElement = useRef(null);
-  const monthYearTextWrapper = useRef(null);
-  const calendarSectionWrapper = useRef(null);
+  const monthYearTextWrappers = [];
+  const calendarSectionWrappers = [];
   const monthSelector = useRef(null);
   const yearSelector = useRef(null);
   const yearSelectorWrapper = useRef(null);
@@ -52,6 +52,7 @@ const Calendar = ({
     activeDate: null,
   });
 
+  const months = [...Array(numberOfMonths > 2 ? 2 : numberOfMonths).keys()];
   const today = getToday();
   let activeDate = mainState.activeDate ? shallowCloneObject(mainState.activeDate) : null;
 
@@ -61,7 +62,9 @@ const Calendar = ({
     else activeDate = shallowCloneObject(today);
   };
 
-  if (!activeDate) setActiveDate();
+  if (!activeDate) {
+    setActiveDate();
+  }
 
   const renderWeekDays = () =>
     Object.keys(WEEK_DAYS).map(key => (
@@ -136,12 +139,7 @@ const Calendar = ({
 
   const getViewMonthDays = (isNewMonth, monthNumber) => {
     const date = getDate(!isNewMonth);
-    if (date.month + monthNumber > 12) {
-      date.month = 1;
-      date.year += 1;
-    } else {
-      date.month += monthNumber;
-    }
+
     const prependingBlankDays = createUniqueRange(getMonthFirstWeekday(date), 'starting-blank');
 
     // all months will have an additional 7 days(week) for rendering purpose
@@ -162,6 +160,7 @@ const Calendar = ({
 
   const renderMonthDays = (isNewMonth, monthNumber) => {
     const allDays = getViewMonthDays(isNewMonth, monthNumber);
+
     return allDays.map(({ id, value: day, month, year, isStandard }) => {
       const dayItem = { day, month, year };
       const isInDisabledDaysRange = disabledDays.some(disabledDay =>
@@ -195,8 +194,7 @@ const Calendar = ({
 
   // animate monthYear text in header and month days
   const animateContent = (direction, parentRef) => {
-    const { current: textWrapper } = parentRef;
-    const wrapperChildren = Array.from(textWrapper.children);
+    const wrapperChildren = Array.from(parentRef.children);
     const shownItem = wrapperChildren.find(child => child.classList.contains('-shown'));
     if (!shownItem) return; // prevent simultaneous animations
     const hiddenItem = wrapperChildren.find(child => child !== shownItem);
@@ -213,8 +211,11 @@ const Calendar = ({
       ...mainState,
       status: direction,
     });
-    animateContent(direction, monthYearTextWrapper);
-    animateContent(direction, calendarSectionWrapper);
+
+    for (let index = 0; index < months.length; index += 1) {
+      animateContent(direction, monthYearTextWrappers[index]);
+      animateContent(direction, calendarSectionWrappers[index]);
+    }
   };
 
   const handleAnimationEnd = ({ target }) => {
@@ -226,7 +227,7 @@ const Calendar = ({
   const updateDate = () => {
     setMainState({
       ...mainState,
-      cycleCount: mainState.cycleCount + 1,
+      cycleCount: mainState.cycleCount + months.length,
       activeDate: getDateAccordingToMonth(activeDate, mainState.status),
     });
   };
@@ -365,22 +366,29 @@ const Calendar = ({
       style={{ '--cl-color-primary': colorPrimary, '--cl-color-primary-light': colorPrimaryLight }}
       ref={calendarElement}
     >
-      {[...Array(numberOfMonths).keys()].map(monthNumber => (
+      {months.map((monthNumber, index) => (
         <div key={monthNumber} className="Calendar__body">
           <div className="Calendar__header">
-            <button
-              tabIndex="-1"
-              className="Calendar__monthArrowWrapper -right"
-              onClick={() => handleMonthClick('PREVIOUS')}
-              aria-label="ماه قبل"
-              type="button"
-              disabled={isPreviousMonthArrowDisabled}
+            {index === 0 && (
+              <button
+                tabIndex="-1"
+                className="Calendar__monthArrowWrapper -right"
+                onClick={() => handleMonthClick('PREVIOUS')}
+                aria-label="ماه قبل"
+                type="button"
+                disabled={isPreviousMonthArrowDisabled}
+              >
+                <span className="Calendar__monthArrow" alt="فلش راست">
+                  &nbsp;
+                </span>
+              </button>
+            )}
+            <div
+              className="Calendar__monthYearContainer"
+              ref={refer => {
+                monthYearTextWrappers[index] = refer;
+              }}
             >
-              <span className="Calendar__monthArrow" alt="فلش راست">
-                &nbsp;
-              </span>
-            </button>
-            <div className="Calendar__monthYearContainer" ref={monthYearTextWrapper}>
               &nbsp;
               <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -shown">
                 <button
@@ -419,18 +427,20 @@ const Calendar = ({
                 </button>
               </div>
             </div>
-            <button
-              tabIndex="-1"
-              className="Calendar__monthArrowWrapper -left"
-              onClick={() => handleMonthClick('NEXT')}
-              aria-label="ماه بعد"
-              type="button"
-              disabled={isNextMonthArrowDisabled}
-            >
-              <span className="Calendar__monthArrow" alt="فلش چپ">
-                &nbsp;
-              </span>
-            </button>
+            {index === months.length - 1 && (
+              <button
+                tabIndex="-1"
+                className="Calendar__monthArrowWrapper -left"
+                onClick={() => handleMonthClick('NEXT')}
+                aria-label="ماه بعد"
+                type="button"
+                disabled={isNextMonthArrowDisabled}
+              >
+                <span className="Calendar__monthArrow" alt="فلش چپ">
+                  &nbsp;
+                </span>
+              </button>
+            )}
           </div>
           <div className="Calendar__monthSelectorAnimationWrapper">
             <div className="Calendar__monthSelectorWrapper">
@@ -448,11 +458,18 @@ const Calendar = ({
             </div>
           </div>
           <div className="Calendar__weekDays">{renderWeekDays()}</div>
-          <div ref={calendarSectionWrapper} className="Calendar__sectionWrapper">
+          <div
+            ref={refer => {
+              calendarSectionWrappers[index] = refer;
+            }}
+            className="Calendar__sectionWrapper"
+          >
             <div
               onAnimationEnd={e => {
                 handleAnimationEnd(e);
-                updateDate();
+                if (index === 0) {
+                  updateDate();
+                }
               }}
               className="Calendar__section -shown"
             >
@@ -461,7 +478,9 @@ const Calendar = ({
             <div
               onAnimationEnd={e => {
                 handleAnimationEnd(e);
-                updateDate();
+                if (index === 0) {
+                  updateDate();
+                }
               }}
               className="Calendar__section -hiddenNext"
             >
