@@ -38,6 +38,7 @@ const Calendar = ({
   maximumDate,
   selectorStartingYear,
   selectorEndingYear,
+  numberOfMonths,
 }) => {
   const calendarElement = useRef(null);
   const monthYearTextWrapper = useRef(null);
@@ -73,10 +74,10 @@ const Calendar = ({
     return isThisMonth ? activeDate : getDateAccordingToMonth(activeDate, mainState.status);
   };
 
-  const getMonthYearText = isNewMonth => {
+  const getMonthYearText = (isNewMonth, monthNumber) => {
     const date = getDate(!isNewMonth);
     const year = toPersianNumber(date.year);
-    const month = getMonthName(date.month);
+    const month = getMonthName(date.month + monthNumber > 12 ? 1 : date.month + monthNumber);
     return `${month} ${year}`;
   };
 
@@ -133,8 +134,14 @@ const Calendar = ({
     return classNames;
   };
 
-  const getViewMonthDays = isNewMonth => {
+  const getViewMonthDays = (isNewMonth, monthNumber) => {
     const date = getDate(!isNewMonth);
+    if (date.month + monthNumber > 12) {
+      date.month = 1;
+      date.year += 1;
+    } else {
+      date.month += monthNumber;
+    }
     const prependingBlankDays = createUniqueRange(getMonthFirstWeekday(date), 'starting-blank');
 
     // all months will have an additional 7 days(week) for rendering purpose
@@ -143,17 +150,18 @@ const Calendar = ({
       day => ({
         ...day,
         isStandard: true,
-        month: date.month,
+        month: date.month + monthNumber > 12 ? 1 : date.month + monthNumber,
         year: date.year,
       }),
       'standard',
     );
+
     const allDays = prependingBlankDays.concat(standardDays, appendingBlankDays);
     return allDays;
   };
 
-  const renderMonthDays = isNewMonth => {
-    const allDays = getViewMonthDays(isNewMonth);
+  const renderMonthDays = (isNewMonth, monthNumber) => {
+    const allDays = getViewMonthDays(isNewMonth, monthNumber);
     return allDays.map(({ id, value: day, month, year, isStandard }) => {
       const dayItem = { day, month, year };
       const isInDisabledDaysRange = disabledDays.some(disabledDay =>
@@ -350,113 +358,118 @@ const Calendar = ({
 
   // determine the hidden animated item
   const isCycleCountEven = mainState.cycleCount % 2 === 0;
+
   return (
     <div
       className={`Calendar ${calendarClassName}`}
       style={{ '--cl-color-primary': colorPrimary, '--cl-color-primary-light': colorPrimaryLight }}
       ref={calendarElement}
     >
-      <div className="Calendar__header">
-        <button
-          tabIndex="-1"
-          className="Calendar__monthArrowWrapper -right"
-          onClick={() => handleMonthClick('PREVIOUS')}
-          aria-label="ماه قبل"
-          type="button"
-          disabled={isPreviousMonthArrowDisabled}
-        >
-          <span className="Calendar__monthArrow" alt="فلش راست">
-            &nbsp;
-          </span>
-        </button>
-        <div className="Calendar__monthYearContainer" ref={monthYearTextWrapper}>
-          &nbsp;
-          <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -shown">
+      {[...Array(numberOfMonths).keys()].map(monthNumber => (
+        <div key={monthNumber} className="Calendar__body">
+          <div className="Calendar__header">
             <button
               tabIndex="-1"
-              onClick={toggleMonthSelector}
+              className="Calendar__monthArrowWrapper -right"
+              onClick={() => handleMonthClick('PREVIOUS')}
+              aria-label="ماه قبل"
               type="button"
-              className="Calendar__monthText"
+              disabled={isPreviousMonthArrowDisabled}
             >
-              {getMonthYearText(isCycleCountEven).split(' ')[0]}
+              <span className="Calendar__monthArrow" alt="فلش راست">
+                &nbsp;
+              </span>
             </button>
+            <div className="Calendar__monthYearContainer" ref={monthYearTextWrapper}>
+              &nbsp;
+              <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -shown">
+                <button
+                  tabIndex="-1"
+                  onClick={toggleMonthSelector}
+                  type="button"
+                  className="Calendar__monthText"
+                >
+                  {getMonthYearText(isCycleCountEven, monthNumber).split(' ')[0]}
+                </button>
+                <button
+                  tabIndex="-1"
+                  onClick={toggleYearSelector}
+                  type="button"
+                  className="Calendar__yearText"
+                >
+                  {getMonthYearText(isCycleCountEven, monthNumber).split(' ')[1]}
+                </button>
+              </div>
+              <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -hiddenNext">
+                <button
+                  tabIndex="-1"
+                  onClick={toggleMonthSelector}
+                  type="button"
+                  className="Calendar__monthText"
+                >
+                  {getMonthYearText(!isCycleCountEven, monthNumber).split(' ')[0]}
+                </button>
+                <button
+                  tabIndex="-1"
+                  onClick={toggleYearSelector}
+                  type="button"
+                  className="Calendar__yearText"
+                >
+                  {getMonthYearText(!isCycleCountEven, monthNumber).split(' ')[1]}
+                </button>
+              </div>
+            </div>
             <button
               tabIndex="-1"
-              onClick={toggleYearSelector}
+              className="Calendar__monthArrowWrapper -left"
+              onClick={() => handleMonthClick('NEXT')}
+              aria-label="ماه بعد"
               type="button"
-              className="Calendar__yearText"
+              disabled={isNextMonthArrowDisabled}
             >
-              {getMonthYearText(isCycleCountEven).split(' ')[1]}
+              <span className="Calendar__monthArrow" alt="فلش چپ">
+                &nbsp;
+              </span>
             </button>
           </div>
-          <div onAnimationEnd={handleAnimationEnd} className="Calendar__monthYear -hiddenNext">
-            <button
-              tabIndex="-1"
-              onClick={toggleMonthSelector}
-              type="button"
-              className="Calendar__monthText"
-            >
-              {getMonthYearText(!isCycleCountEven).split(' ')[0]}
-            </button>
-            <button
-              tabIndex="-1"
-              onClick={toggleYearSelector}
-              type="button"
-              className="Calendar__yearText"
-            >
-              {getMonthYearText(!isCycleCountEven).split(' ')[1]}
-            </button>
+          <div className="Calendar__monthSelectorAnimationWrapper">
+            <div className="Calendar__monthSelectorWrapper">
+              <div ref={monthSelector} className="Calendar__monthSelector">
+                {renderMonthSelectorItems()}
+              </div>
+            </div>
           </div>
-        </div>
-        <button
-          tabIndex="-1"
-          className="Calendar__monthArrowWrapper -left"
-          onClick={() => handleMonthClick('NEXT')}
-          aria-label="ماه بعد"
-          type="button"
-          disabled={isNextMonthArrowDisabled}
-        >
-          <span className="Calendar__monthArrow" alt="فلش چپ">
-            &nbsp;
-          </span>
-        </button>
-      </div>
-      <div className="Calendar__monthSelectorAnimationWrapper">
-        <div className="Calendar__monthSelectorWrapper">
-          <div ref={monthSelector} className="Calendar__monthSelector">
-            {renderMonthSelectorItems()}
-          </div>
-        </div>
-      </div>
 
-      <div className="Calendar__yearSelectorAnimationWrapper">
-        <div ref={yearSelectorWrapper} className="Calendar__yearSelectorWrapper">
-          <div ref={yearSelector} className="Calendar__yearSelector">
-            {renderSelectorYears()}
+          <div className="Calendar__yearSelectorAnimationWrapper">
+            <div ref={yearSelectorWrapper} className="Calendar__yearSelectorWrapper">
+              <div ref={yearSelector} className="Calendar__yearSelector">
+                {renderSelectorYears()}
+              </div>
+            </div>
+          </div>
+          <div className="Calendar__weekDays">{renderWeekDays()}</div>
+          <div ref={calendarSectionWrapper} className="Calendar__sectionWrapper">
+            <div
+              onAnimationEnd={e => {
+                handleAnimationEnd(e);
+                updateDate();
+              }}
+              className="Calendar__section -shown"
+            >
+              {renderMonthDays(isCycleCountEven, monthNumber)}
+            </div>
+            <div
+              onAnimationEnd={e => {
+                handleAnimationEnd(e);
+                updateDate();
+              }}
+              className="Calendar__section -hiddenNext"
+            >
+              {renderMonthDays(!isCycleCountEven, monthNumber)}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="Calendar__weekDays">{renderWeekDays()}</div>
-      <div ref={calendarSectionWrapper} className="Calendar__sectionWrapper">
-        <div
-          onAnimationEnd={e => {
-            handleAnimationEnd(e);
-            updateDate();
-          }}
-          className="Calendar__section -shown"
-        >
-          {renderMonthDays(isCycleCountEven)}
-        </div>
-        <div
-          onAnimationEnd={e => {
-            handleAnimationEnd(e);
-            updateDate();
-          }}
-          className="Calendar__section -hiddenNext"
-        >
-          {renderMonthDays(!isCycleCountEven)}
-        </div>
-      </div>
+      ))}
     </div>
   );
 };
@@ -488,6 +501,7 @@ Calendar.defaultProps = {
   calendarRangeEndClassName: '',
   selectorStartingYear: 1300,
   selectorEndingYear: 1450,
+  numberOfMonths: 1,
 };
 
 Calendar.propTypes = {
@@ -511,6 +525,7 @@ Calendar.propTypes = {
   maximumDate: PropTypes.shape(dayShape),
   selectorStartingYear: PropTypes.number,
   selectorEndingYear: PropTypes.number,
+  numberOfMonths: PropTypes.number,
 };
 
 export { Calendar };
