@@ -31,6 +31,7 @@ const DatePicker = ({
   maximumDate,
   selectorStartingYear,
   selectorEndingYear,
+  numberOfMonths,
 }) => {
   const calendarContainerElement = useRef(null);
   const dateInputElement = useRef(null);
@@ -139,6 +140,7 @@ const DatePicker = ({
           maximumDate={maximumDate}
           selectorStartingYear={selectorStartingYear}
           selectorEndingYear={selectorEndingYear}
+          numberOfMonths={numberOfMonths}
         />
       </div>
       <DatePickerInput
